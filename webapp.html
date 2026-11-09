@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>智启煤海 · 煤矿生产排程与物料调度智能助手</title>
+<style>
+:root{
+  --bg:#0b1016; --panel:#121a24; --card:#1a2534; --line:#243248;
+  --txt:#e8edf4; --dim:#8fa3bd; --amber:#f5a623; --amber2:#ffc76b;
+  --green:#4ade80; --red:#f87171; --blue:#60a5fa; --purple:#c084fc;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;background:var(--bg);color:var(--txt);height:100vh;display:flex;flex-direction:column}
+header{background:linear-gradient(135deg,#1a2534,#0f1822);border-bottom:1px solid var(--line);padding:14px 24px;display:flex;align-items:center;gap:14px;flex-shrink:0}
+.logo{font-size:22px;font-weight:700;color:var(--amber);letter-spacing:1px}
+.subtitle{font-size:13px;color:var(--dim);flex:1}
+.status{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--green)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+main{flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:18px}
+main::-webkit-scrollbar{width:6px}
+main::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+.msg{display:flex;gap:12px;max-width:92%;animation:fadein .3s ease}
+@keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.msg.user{align-self:flex-end;flex-direction:row-reverse}
+.avatar{width:38px;height:38px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px}
+.msg.bot .avatar{background:linear-gradient(135deg,#f5a623,#c47b0e)}
+.msg.user .avatar{background:#2a3a52;font-size:15px}
+.bubble{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;line-height:1.75;font-size:14px;min-width:60px}
+.msg.user .bubble{background:#2b2107;border-color:#5a4410}
+.bubble strong{color:var(--amber2)}
+/* 工具调用卡片 */
+.tool-card{background:#101825;border:1px solid var(--line);border-radius:10px;margin-top:10px;overflow:hidden}
+.tool-head{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;font-size:13px;user-select:none}
+.tool-head .ico{font-size:15px}
+.tool-head .tname{color:var(--blue);font-family:Consolas,monospace;font-size:12px}
+.tool-head .tdesc{color:var(--dim);flex:1}
+.tool-head .badge{font-size:11px;padding:2px 8px;border-radius:10px;background:#14301f;color:var(--green)}
+.tool-head .badge.err{background:#3a1518;color:var(--red)}
+.tool-head .arrow{color:var(--dim);transition:transform .2s}
+.tool-card.open .tool-head .arrow{transform:rotate(90deg)}
+.tool-body{display:none;padding:0 12px 12px;border-top:1px dashed var(--line)}
+.tool-card.open .tool-body{display:block}
+.tool-body h5{font-size:12px;color:var(--dim);margin:10px 0 6px}
+.tool-body pre{background:#0a0f16;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:12px;overflow-x:auto;color:#b8c8dc;font-family:Consolas,monospace;white-space:pre-wrap;word-break:break-all}
+/* 结构化结果 */
+table{width:100%;border-collapse:collapse;font-size:12.5px;margin:4px 0}
+th{background:#0e1622;color:var(--dim);padding:6px 8px;text-align:left;font-weight:600;border:1px solid var(--line)}
+td{padding:6px 8px;border:1px solid var(--line);color:var(--txt)}
+tr:nth-child(even) td{background:#0f1722}
+.tag{display:inline-block;padding:1px 8px;border-radius:9px;font-size:11px}
+.tag.ok{background:#14301f;color:var(--green)}
+.tag.bad{background:#3a1518;color:var(--red)}
+.tag.mid{background:#3a3010;color:var(--amber2)}
+.tag.rec{background:#13243a;color:var(--blue)}
+.gantt-row{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:12.5px}
+.gantt-label{width:150px;color:var(--dim);flex-shrink:0}
+.gantt-bar{height:18px;border-radius:4px;background:linear-gradient(90deg,#f5a623,#c47b0e);min-width:40px;display:flex;align-items:center;padding:0 8px;font-size:11px;color:#1a1205;white-space:nowrap}
+.gantt-bar.b2{background:linear-gradient(90deg,#60a5fa,#3b6fd4);color:#fff}
+.gantt-bar.b3{background:linear-gradient(90deg,#4ade80,#2e9d5c);color:#0a2010}
+.gantt-bar.b4{background:linear-gradient(90deg,#c084fc,#8b4fd4);color:#fff}
+.risk-item{display:flex;gap:8px;align-items:flex-start;margin:6px 0;font-size:12.5px;padding:8px 10px;border-radius:6px;background:#0e1622;border-left:3px solid var(--amber)}
+.risk-item.high{border-left-color:var(--red)}
+.risk-item.low{border-left-color:var(--green)}
+.file-card{display:flex;align-items:center;gap:10px;background:#0e1622;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:6px 0}
+.file-card .ficon{font-size:26px}
+.file-card .fname{font-weight:600;font-size:13px}
+.file-card .fmeta{font-size:11.5px;color:var(--dim)}
+.route-line{font-size:13px;color:var(--amber2);font-weight:600;margin:4px 0}
+/* 快捷指令 */
+.shortcuts{display:flex;gap:8px;padding:10px 24px;flex-wrap:wrap;flex-shrink:0;border-top:1px solid var(--line);background:#0d141e}
+.shortcuts button{background:var(--card);border:1px solid var(--line);color:var(--dim);padding:6px 14px;border-radius:18px;font-size:12.5px;cursor:pointer;transition:all .2s}
+.shortcuts button:hover{border-color:var(--amber);color:var(--amber2);background:#1f1a0d}
+.shortcuts button.primary{background:linear-gradient(135deg,#f5a623,#c47b0e);color:#1a1205;border:none;font-weight:700}
+.shortcuts button.primary:hover{filter:brightness(1.1)}
+/* 输入栏 */
+footer{display:flex;gap:10px;padding:14px 24px;background:var(--panel);border-top:1px solid var(--line);flex-shrink:0}
+footer input{flex:1;background:#0a0f16;border:1px solid var(--line);border-radius:10px;padding:12px 16px;color:var(--txt);font-size:14px;outline:none;transition:border .2s}
+footer input:focus{border-color:var(--amber)}
+footer button{background:linear-gradient(135deg,#f5a623,#c47b0e);border:none;color:#1a1205;font-weight:700;padding:0 26px;border-radius:10px;font-size:14px;cursor:pointer;transition:filter .2s}
+footer button:hover{filter:brightness(1.12)}
+footer button:disabled{opacity:.5;cursor:not-allowed}
+.typing{display:inline-flex;gap:4px;padding:4px 0}
+.typing span{width:7px;height:7px;background:var(--amber);border-radius:50%;animation:tp 1.2s infinite}
+.typing span:nth-child(2){animation-delay:.2s}
+.typing span:nth-child(3){animation-delay:.4s}
+@keyframes tp{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-6px);opacity:1}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">⛏ 智启煤海</div>
+  <div class="subtitle">煤矿生产排程与物料调度智能助手 · MCP 仿真环境</div>
+  <div class="status"><span class="dot"></span>5 个 MCP 工具已就绪</div>
+</header>
+<main id="chat"></main>
+<div class="shortcuts">
+  <button class="primary" data-msg="一键闭环调度">⚡ 一键闭环调度</button>
+  <button data-msg="查一下物资库存">查库存</button>
+  <button data-msg="设备运行状态">查设备</button>
+  <button data-msg="从副井口料场到掘进工作面1号的配送路线">算路线</button>
+  <button data-msg="对C301和E102排程优化">排程优化</button>
+  <button data-msg="导出Word调度单">导出文档</button>
+</div>
+<footer>
+  <input id="msg" placeholder="输入您的调度需求，如：一键闭环调度 / 查锚杆库存 / EQ-02故障情况 ..." autocomplete="off">
+  <button id="send">发送</button>
+</footer>
+<script>
+(function(){
+"use strict";
+var chat=document.getElementById('chat'),input=document.getElementById('msg'),sendBtn=document.getElementById('send');
+var WELCOME='您好，我是 **智启煤海** 智能助手，专注煤矿生产排程与物料调度。\\n我可以调用 5 个 MCP 仿真工具，为您完成：物资库存盘点、设备状态监控、井下配送路线计算、生产排程寻优、调度文档导出。\\n\\n点击下方 **⚡ 一键闭环调度** 立即体验完整业务闭环，或直接输入您的需求。';
+
+function esc(s){var d=document.createElement('div');d.textContent=s==null?'':String(s);return d.innerHTML}
+function md(t){return esc(t).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>')}
+
+function addMsg(who,html){
+  var d=document.createElement('div');d.className='msg '+who;
+  d.innerHTML='<div class="avatar">'+(who==='bot'?'⛏':'🧑')+'</div><div class="bubble">'+html+'</div>';
+  chat.appendChild(d);chat.scrollTop=chat.scrollHeight;return d;
+}
+
+/* ---- 结构化结果渲染 ---- */
+function tbl(headers,rows){
+  var h='<table><tr>'+headers.map(function(x){return '<th>'+esc(x)+'</th>'}).join('')+'</tr>';
+  rows.forEach(function(r){h+='<tr>'+r.map(function(c){return '<td>'+c+'</td>'}).join('')+'</tr>'});
+  return h+'</table>';
+}
+function tag(cls,txt){return '<span class="tag '+cls+'">'+esc(txt)+'</span>'}
+
+function renderResult(tool,res){
+  if(!res||res._error)return '<pre>'+esc(JSON.stringify(res,null,2))+'</pre>';
+  var h='';
+  try{
+    if(tool==='coal_mine_wms_db_query'){
+      var qt=res.query_type,data=res.data||[];
+      if(qt==='stock'){
+        h=tbl(['物料','编码','库存','安全库存','在途','到货时间','日均单耗'],
+          data.map(function(m){return [esc(m.material_name),esc(m.material_code),
+            m.stock_num<m.safe_stock?tag('bad',m.stock_num):tag('ok',m.stock_num),
+            m.safe_stock,m.on_the_way,esc(m.arrival_time||'—'),m.unit_consume]}));
+        if(res.conclusion)h+='<p style="margin-top:8px;font-size:13px">💡 '+esc(res.conclusion)+'</p>';
+      }else if(qt==='inbound'){
+        h=tbl(['物料','在途数量','预计到货'],data.map(function(m){return [esc(m.material_name),m.on_the_way,esc(m.arrival_time)]}));
+      }else{
+        h=tbl(['工作面','物料','日均消耗','统计期'],data.map(function(m){return [esc(m.workface_id),esc(m.material_name),m.avg_daily_consume,esc(m.period)]}));
+      }
+    }
+    else if(tool==='coal_mine_equipment_monitor'){
+      var qt2=res.query_type,data2=res.data||[];
+      if(qt2==='status'){
+        h=tbl(['设备ID','设备名称','工作面','运行状态','下次检修','输送能力','故障'],
+          data2.map(function(e){return [esc(e.equip_id),esc(e.equip_name),esc(e.workface_id),
+            e.fault_alert?tag('bad',e.run_status):tag('ok',e.run_status),
+            esc(e.next_maintain),e.capacity,e.fault_alert?tag('bad','是'):'—']}));
+        if(res.fault_summary)h+='<p style="margin-top:8px;font-size:13px">⚠️ '+esc(res.fault_summary)+'</p>';
+      }else if(qt2==='maintain'){
+        h=tbl(['设备名称','下次检修时间'],data2.map(function(e){return [esc(e.equip_name),esc(e.next_maintain)]}));
+      }else{
+        h=tbl(['设备名称','额定输送能力'],data2.map(function(e){return [esc(e.equip_name),e.capacity+' t/h']}));
+      }
+    }
+    else if(tool==='coal_mine_transport_gis_route'){
+      (res.route_list||[]).forEach(function(r,i){
+        h+='<div class="route-line">'+(r.recommend?'⭐ ':'')+esc(r.path)+'</div>';
+        h+='<div style="font-size:12.5px;color:var(--dim);margin-bottom:8px">耗时 '+r.cost_minute+' 分钟 · '+
+           (r.congestion?tag('mid','拥堵'):tag('ok','畅通'))+' · '+(r.recommend?tag('rec','推荐'):'')+' '+esc(r.remark)+'</div>';
+      });
+      if(res.conclusion)h+='<p style="font-size:13px">💡 '+esc(res.conclusion)+'</p>';
+    }
+    else if(tool==='coal_mine_schedule_optimizer'){
+      var colors=['','b2','b3','b4'];
+      h+='<h5 style="color:var(--dim);font-size:12px;margin-bottom:6px">📊 甘特排程</h5>';
+      (res.gantt_info||[]).forEach(function(g,i){
+        h+='<div class="gantt-row"><span class="gantt-label">'+esc(g.workface_id)+' · '+esc(g.task)+'</span>'+
+           '<span class="gantt-bar '+(colors[i%4]||'')+'">'+esc(g.period)+'</span></div>';
+        h+='<div style="font-size:11.5px;color:var(--dim);margin-left:158px;margin-bottom:4px">计划：'+esc(g.plan)+'</div>';
+      });
+      if(res.expect_output){h+='<p style="margin-top:8px;font-size:13px">📅 预期产出：日产量 <strong>'+esc(res.expect_output.daily_coal)+'</strong>，日进尺 <strong>'+esc(res.expect_output.daily_tunneling)+'</strong></p>'}
+      if(res.risk&&res.risk.length){
+        h+='<h5 style="color:var(--dim);font-size:12px;margin:10px 0 4px">⚠️ 风险提示</h5>';
+        res.risk.forEach(function(r){h+='<div class="risk-item">'+esc(r)+'</div>'});
+      }
+      if(res.conclusion)h+='<p style="margin-top:8px;font-size:13px">💡 '+esc(res.conclusion)+'</p>';
+    }
+    else if(tool==='coal_mine_schedule_export'){
+      h+='<div class="file-card"><span class="ficon">'+(res.file_type==='Word'?'📄':'📈')+'</span>'+
+         '<div><div class="fname">'+esc(res.file_name)+'</div>'+
+         '<div class="fmeta">'+esc(res.file_type)+' · '+esc(res.file_size||'')+(res.sheets?' · 工作表：'+res.sheets.join('、'):'')+'</div></div></div>';
+      h+='<p style="font-size:12px;color:var(--dim)">'+esc(res.download_url||'')+'</p>';
+    }
+    else{h='<pre>'+esc(JSON.stringify(res,null,2))+'</pre>'}
+  }catch(e){h='<pre>'+esc(JSON.stringify(res,null,2))+'</pre>'}
+  return h;
+}
+
+function renderToolCall(c){
+  var ok=!c.result||!c.result._error;
+  var card=document.createElement('div');card.className='tool-card';
+  card.innerHTML='<div class="tool-head"><span class="ico">'+(ok?'🔧':'❌')+'</span>'+
+    '<span class="tname">'+esc(c.tool)+'</span><span class="tdesc">'+esc(c.desc)+'</span>'+
+    '<span class="badge'+(ok?'':' err')+'">'+(ok?'调用成功':'调用失败')+'</span><span class="arrow">▶</span></div>'+
+    '<div class="tool-body"><h5>入参</h5><pre>'+esc(JSON.stringify(c.args,null,2))+'</pre>'+
+    '<h5>返回结果</h5>'+renderResult(c.tool,c.result)+'</div>';
+  card.querySelector('.tool-head').addEventListener('click',function(){card.classList.toggle('open')});
+  return card;
+}
+
+function addBotReply(data){
+  var bubble=addMsg('bot','');
+  var b=bubble.querySelector('.bubble');
+  if(data.tool_calls&&data.tool_calls.length){
+    var steps=document.createElement('div');
+    steps.innerHTML='<div style="font-size:12px;color:var(--dim);margin-bottom:2px">🤖 智能体正在调用 MCP 工具（点击展开详情）：</div>';
+    b.appendChild(steps);
+    data.tool_calls.forEach(function(c){steps.appendChild(renderToolCall(c))});
+  }
+  var txt=document.createElement('div');
+  txt.style.marginTop=data.tool_calls&&data.tool_calls.length?'10px':'0';
+  txt.innerHTML=md(data.reply||'');
+  b.appendChild(txt);
+  chat.scrollTop=chat.scrollHeight;
+}
+
+var busy=false;
+function send(text){
+  if(busy||!text.trim())return;
+  busy=true;sendBtn.disabled=true;
+  addMsg('user',esc(text));
+  input.value='';
+  var t=addMsg('bot','<div class="typing"><span></span><span></span><span></span></div>');
+  fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({message:text})})
+    .then(function(r){return r.json()})
+    .then(function(d){t.remove();addBotReply(d)})
+    .catch(function(e){t.remove();addMsg('bot','⚠️ 请求失败：'+esc(e.message))})
+    .finally(function(){busy=false;sendBtn.disabled=false;input.focus()});
+}
+
+sendBtn.addEventListener('click',function(){send(input.value)});
+input.addEventListener('keydown',function(e){if(e.key==='Enter')send(input.value)});
+document.querySelectorAll('.shortcuts button').forEach(function(b){
+  b.addEventListener('click',function(){send(b.getAttribute('data-msg'))});
+});
+
+addMsg('bot',md(WELCOME));
+input.focus();
+})();
+</script>
+</body>
+</html>

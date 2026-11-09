@@ -1,0 +1,9 @@
+cloudflared.exe
+*.docx
+resp.json
+webapp.log
+.joycode/
+*_mock.py
+!coal_mine_mock_mcp.py
+Dockerfile
+.dockerignore
